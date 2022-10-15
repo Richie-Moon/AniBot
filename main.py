@@ -100,6 +100,9 @@ def format_embed(embed, data) -> discord.Embed:
 
 @app_commands.command()
 async def anime(interaction: discord.Interaction, name: str = None, anime_id: int = None):
+    if name is None and anime_id is None:
+        await interaction.response.send_message("Please provide at least one of `name` or `animeID`")
+        return
     try:
         query = anilist.get_multiple(name=name, anime_id=anime_id, page=1)
         if type(query) == dict:
@@ -234,8 +237,8 @@ async def help(interaction: discord.Interaction):
 
 
 @app_commands.command()
-async def test(interaction: discord.Interaction):
-    await interaction.response.send_message('test')
+async def test(interaction: discord.Interaction, Number: int):
+    await interaction.response.send_message(Number)
 
 
 @app_commands.command()
