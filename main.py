@@ -87,6 +87,8 @@ def format_embed(embed, data) -> discord.Embed:
 
     if data['next_airing_episode'] == 'Not Available':
         embed.add_field(name="Next Episode:", value='This anime has finished Airing!')
+    elif data['next_airing_episode'] == 'Not Yet Release':
+        embed.add_field(name="Next Episode:", value=data['next_airing_episode'])
     else:
         embed.add_field(name="Next Episode:", value=f"Episode {data['next_airing_episode']['episode']} (<t:{data['next_airing_episode']['airingAt']}>, "
                                                     f"<t:{data['next_airing_episode']['airingAt']}:R>)",

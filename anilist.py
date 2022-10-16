@@ -115,9 +115,12 @@ def get_anime(anime_id: int):
         cover_color = data['coverImage']['color']
 
         airing_format = data['format']
-        airing_status = data['status']
+        airing_status = data['status'].replace('_', ' ').title()
         airing_episodes = data['episodes']
-        next_airing_episode = data['nextAiringEpisode']
+        if airing_status == 'Not Yet Released':
+            next_airing_episode = 'Not Yet Release'
+        else:
+            next_airing_episode = data['nextAiringEpisode']
         season = data['season']
         episode_duration = data['duration']
 
