@@ -87,13 +87,17 @@ def get_anime(anime_id: int):
                 }
                 isAdult
                 countryOfOrigin
+                siteUrl
+                trailer {
+                    id
+                    site
+                }
             }
         }
 """
     variables = {'id': anime_id}
 
     response = json.loads(requests.post(url, json={'query': query, 'variables': variables}).text)
-    print(response)
     data = response['data']['Media']
 
     if data is not None:
@@ -124,10 +128,18 @@ def get_anime(anime_id: int):
         is_adult = data['isAdult']
         origin_country = data['countryOfOrigin'].lower()
 
+        site_url = data['siteUrl']
+        if data['trailer'] is None:
+            trailer_url = data['trailer']
+        else:
+            if data['trailer']['site'] == 'youtube':
+                trailer_url = f"https://youtube.com/watch?v={data['trailer']['id']}"
+            else:
+                trailer_url = f"https://dailymotion.com/video/{data['traier']['id']}"
         formatted_data = {'_id': _id, 'name_romaji': name_romaji, 'name_english': name_english, 'start_date': start_date, 'end_date': end_date, 'cover_image': cover_image,
                           'banner_image': banner_image, 'cover_color': cover_color, 'airing_format': airing_format, 'airing_status': airing_status, 'airing_episodes': airing_episodes,
                           'next_airing_episode': next_airing_episode, 'season': season, 'episode_duration': episode_duration, 'desc': description, 'average_score': average_score,
-                          'genres': genres, 'is_adult': is_adult, 'origin_country': origin_country}
+                          'genres': genres, 'is_adult': is_adult, 'origin_country': origin_country, 'site_url': site_url, 'trailer_url': trailer_url}
 
         return formatted_data
 

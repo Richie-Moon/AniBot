@@ -93,7 +93,6 @@ def format_embed(embed, data) -> discord.Embed:
                         inline=False)
 
     embed.add_field(name='Average Score:', value=f"**{data['average_score']}**/100")
-    embed.add_field(name='Links:', value=f"[{data['name_romaji']} AniList Page](https://anilist.co/anime/{data['_id']}/)")
 
     return embed
 
@@ -116,7 +115,26 @@ async def anime(interaction: discord.Interaction, name: str = None, anime_id: in
                 embed = discord.Embed(colour=discord.Color.from_rgb(r, g, b), timestamp=interaction.created_at, title=query['name_romaji'], description=query['name_english'])
                 embed.set_author(name=interaction.user.name, icon_url=interaction.user.avatar)
                 embed = format_embed(embed, query)
-                await interaction.response.send_message(embed=embed)
+                link_buttons = LinkButton()
+                if query['trailer_url'] != 'Not Available':
+                    if len(f"{query['name_romaji']} Anilist Page") > 80:
+                        link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"AniList Page", url=query['site_url']))
+                        link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"Trailer", url=query['trailer_url']))
+
+                    elif 40 < len(f"{query['name_romaji']} Anilist Page") <= 80:
+                        link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} AniList Page", url=query['site_url'], row=1))
+                        link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} trailer", url=query['trailer_url'], row=2))
+
+                    else:
+                        link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} AniList Page", url=query['site_url']))
+                        link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} trailer", url=query['trailer_url']))
+
+                else:
+                    if len(f"{query['name_romaji']} Trailer") > 80:
+                        link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"AniList Page", url=query['site_url']))
+                    else:
+                        link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} AniList Page", url=query['site_url']))
+                await interaction.response.send_message(embed=embed, view=link_buttons)
 
             except KeyError:
                 await interaction.response.send_message(content='The `lastPage` number may be wrong due to API restrictions. ', view=View(query, name))
@@ -132,6 +150,11 @@ async def anime(interaction: discord.Interaction, name: str = None, anime_id: in
         embed.add_field(name='Error', value=e)
 
         await interaction.response.send_message(embed=embed)
+
+
+class LinkButton(discord.ui.View):
+    def __init__(self):
+        super().__init__()
 
 
 class Options(discord.ui.Select):
@@ -162,7 +185,29 @@ class Options(discord.ui.Select):
         embed = discord.Embed(colour=discord.Color.from_rgb(r, g, b), timestamp=interaction.created_at, title=query['name_romaji'], description=query['name_english'])
         embed.set_author(name=interaction.user.name, icon_url=interaction.user.avatar)
         embed = format_embed(embed, query)
-        await interaction.response.send_message(embed=embed)
+
+        link_buttons = LinkButton()
+
+        if query['trailer_url'] != 'Not Available':
+            if len(f"{query['name_romaji']} Anilist Page") > 80:
+                link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"AniList Page", url=query['site_url']))
+                link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"Trailer", url=query['trailer_url']))
+
+            elif 40 < len(f"{query['name_romaji']} Anilist Page") <= 80:
+                link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} AniList Page", url=query['site_url'], row=1))
+                link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} trailer", url=query['trailer_url'], row=2))
+
+            else:
+                link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} AniList Page", url=query['site_url']))
+                link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} trailer", url=query['trailer_url']))
+
+        else:
+            if len(f"{query['name_romaji']} Trailer") > 80:
+                link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"AniList Page", url=query['site_url']))
+            else:
+                link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} AniList Page", url=query['site_url']))
+
+        await interaction.response.send_message(embed=embed, view=link_buttons)
 
 
 class View(discord.ui.View):
@@ -237,8 +282,8 @@ async def help(interaction: discord.Interaction):
 
 
 @app_commands.command()
-async def test(interaction: discord.Interaction, Number: int):
-    await interaction.response.send_message(Number)
+async def test(interaction: discord.Interaction, number: int):
+    await interaction.response.send_message(number)
 
 
 @app_commands.command()
