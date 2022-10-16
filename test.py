@@ -7,6 +7,8 @@ import anilist
 from os import environ
 from dotenv import load_dotenv
 import pymongo
+import json
+import requests
 
 load_dotenv()
 PASSWORD = environ['PASSWORD']
@@ -17,8 +19,6 @@ db = client['test_db']
 collection = db['test_collection']
 post = {'_id': 'test', 'name': 'Richie'}
 
-# collection.insert_one(post)
-
-print(anilist.get_multiple(name='one piece', status='RELEASING'))
+collection.insert_one(post)
 
 # replace('~', '||'), replace('!', ''), replace('__', '**')

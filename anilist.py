@@ -157,30 +157,28 @@ def get_anime(anime_id: int):
 
 
 def get_next_airing_episode(anime_id: int):
-    print(anime_id)
     query = """
-    query ($id: Int) {
-        Media(type: ANIME, id: $id) {
-            title {
-                romaji
-                english
-            }
-            nextAiringEpisode {it 
-                airingAt
-                timeUntilAiring
-                episode
+        query ($id: Int) {
+            Media (type: ANIME, id: $id) {
+                id
+                title {
+                    romaji
+                    english
+                }
+                nextAiringEpisode {
+                    airingAt
+                    timeUntilAiring
+                    episode
+                }
             }
         }
-    }
     """
 
-    variables = {'$id': anime_id}
-    print(variables)
+    variables = {'id': anime_id}
 
     response = json.loads(requests.post(url, json={'query': query, 'variables': variables}).text)
+    print(response)
     data = response['data']['Media']
-
-    print(data)
 
     if data is not None:
         title = data['title']
