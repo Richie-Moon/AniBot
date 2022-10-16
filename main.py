@@ -272,6 +272,11 @@ class View(discord.ui.View):
 
 
 @app_commands.command()
+async def track(interaction: discord.Interaction, name: str, anime_id: int):
+    query = anilist.get_multiple(name=name, anime_id=anime_id, status='RELEASING')
+
+
+@app_commands.command()
 async def help(interaction: discord.Interaction):
     fields = {"`/anime <anime name>`": "Get anime info from Anilist.", "`/ping`": "Displays latency.", '`/todo`': "Shows the things that Richie is too lazy to implement. "}
     embed = discord.Embed(colour=discord.Color.from_rgb(255, 255, 255), timestamp=interaction.created_at, title="Help")
