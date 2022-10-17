@@ -5,6 +5,8 @@ url = 'https://graphql.anilist.co'
 
 
 def get_multiple(name, anime_id: int = None, page: int = 1, status: str = None):
+    """Responds with multiple anime which fit the search criteria (name and anime_id). Providing anime_id will always return 1 result.
+    If only 1 anime is retrieved, the function will automatically query get_anime() using the id, returning full data. """
     query = """
         query ($search: String, $id: Int, $page: Int, $perpage: Int, $status: MediaStatus) {
             Page (page: $page, perPage: $perpage) {
@@ -41,10 +43,9 @@ def get_multiple(name, anime_id: int = None, page: int = 1, status: str = None):
 
     if data is not None:
         if len(data['media']) == 0:
-            return [{'Not Found', 404}]
+            return [{'message': 'Not Found', 'status': 404}]
         elif len(data['media']) == 1 and data['pageInfo']['lastPage'] == 1:
             if status == 'RELEASING':
-                print(data['media'][0]['id'])
                 return get_next_airing_episode(data['media'][0]['id'])
             else:
                 return get_anime(data['media'][0]['id'])
@@ -55,6 +56,7 @@ def get_multiple(name, anime_id: int = None, page: int = 1, status: str = None):
 
 
 def get_anime(anime_id: int):
+    """Returns all required data formatted, about the anime using the ID. """
     query = """
         query ($id: Int) {
             Media (type: ANIME, id: $id) {
@@ -188,6 +190,9 @@ def get_next_airing_episode(anime_id: int):
 
         name_english = title['english']
         name_romaji = title['romaji']
+
+        if next_airing_episode is None:
+            return None
 
         airing_at = next_airing_episode['airingAt']
         time_until_airing = next_airing_episode['timeUntilAiring']

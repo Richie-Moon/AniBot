@@ -15,10 +15,10 @@ PASSWORD = environ['PASSWORD']
 
 client = pymongo.MongoClient(f"mongodb+srv://CSA:{PASSWORD}@anibot.o2nqcvj.mongodb.net/?retryWrites=true&w=majority")
 
-db = client['test_db']
-collection = db['test_collection']
-post = {'_id': 'test', 'name': 'Richie'}
+db = client['release_tracking']
+collection = db['792309472784547850']
 
-collection.insert_one(post)
+collection.insert_one({'_id': 127230})
 
+print(anilist.get_next_airing_episode(108489))
 # replace('~', '||'), replace('!', ''), replace('__', '**')

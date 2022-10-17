@@ -4,15 +4,36 @@ from os import environ
 from dotenv import load_dotenv
 import pymongo
 import anilist
+from discord.ext import tasks
+from pymongo import errors
 
 load_dotenv()
 TOKEN = environ['TOKEN']
 PASSWORD = environ['PASSWORD']
 
-client = pymongo.MongoClient(f"mongodb+srv://CSA:{PASSWORD}@anibot.o2nqcvj.mongodb.net/?retryWrites=true&w=majority")
+db_client = pymongo.MongoClient(f"mongodb+srv://CSA:{PASSWORD}@anibot.o2nqcvj.mongodb.net/?retryWrites=true&w=majority")
 
-db = client['release_tracking']
+db = db_client['release_tracking']
 collection = db['792309472784547850']
+
+
+@tasks.loop(minutes=1.0)
+async def update_times():
+    tracking = collection.find()
+    for anime in tracking:
+        query = anilist.get_next_airing_episode(anime['_id'])
+        if query is None:
+            collection.delete_one({'_id': anime['id']})
+
+        elif query['time_until_airing'] > anime['time_until_airing']:
+            if query['name_romaji'] == query['name_english'] or query['name_english'] is None:
+                await channel.send(f"Episode **{query['episode']}** of ***{query['name_romaji']}*** just aired!\n"
+                                   f"[{query['name_romaji']} AniList Page](https://anilist.co/anime/{query['id']}/)")
+            else:
+                await channel.send(f"Episode **{query['episode']}** of ***{query['name_romaji']} ({query['name_english']})*** just aired!"
+                                   f"[{query['name_romaji']} AniList Page](https://anilist.co/anime/{query['id']}/)")
+        else:
+            collection.update_one({'_id': query['id']}, {'$set': {'time_until_airing': query['time_until_airing']}})
 
 
 class aclient(discord.Client):
@@ -30,10 +51,14 @@ class aclient(discord.Client):
         if not self.synced:
             await tree.sync()
             self.synced = True
+
+        update_times.start()
+
         print(f"Logged in as {self.user}")
 
 
 client = aclient()
+channel = client.get_channel(804168856771756043)
 tree = app_commands.CommandTree(client)
 
 
@@ -202,11 +227,9 @@ class Options(discord.ui.Select):
                 if len(f"{query['name_romaji']} Anilist Page") > 80:
                     link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"AniList Page", url=query['site_url']))
                     link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"Trailer", url=query['trailer_url']))
-
                 elif 40 < len(f"{query['name_romaji']} Anilist Page") <= 80:
                     link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} AniList Page", url=query['site_url'], row=1))
                     link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} trailer", url=query['trailer_url'], row=2))
-
                 else:
                     link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} AniList Page", url=query['site_url']))
                     link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} trailer", url=query['trailer_url']))
@@ -220,10 +243,13 @@ class Options(discord.ui.Select):
             await interaction.response.send_message(embed=embed, view=link_buttons)
 
         else:
-            query = anilist.get_next_airing_episode(int(self.values[0]))
-            collection.insert_one({'_id': query['id'], 'time_until_airing': query['time_until_airing']})
-            await interaction.response.send_mesage(f"Successfully tracking {query['name_romaji']}. "
-                                                   f"Episode {query['episode']} is releasing at <t:{query['airing_at']}> (<t:{query['airing_at']}:R>)")
+            try:
+                query = anilist.get_next_airing_episode(int(self.values[0]))
+                collection.insert_one({'_id': query['id'], 'time_until_airing': query['time_until_airing']})
+                await interaction.response.send_mesage(f"Successfully tracking {query['name_romaji']}. "
+                                                       f"Episode {query['episode']} is releasing at <t:{query['airing_at']}> (<t:{query['airing_at']}:R>)")
+            except pymongo.errors.DuplicateKeyError:
+                await interaction.response.send_message('This anime is already being tracked. ')
 
 
 class View(discord.ui.View):
@@ -286,22 +312,28 @@ class View(discord.ui.View):
 
 
 @app_commands.command()
-async def track(interaction: discord.Interaction, name: str, anime_id: int):
+async def track(interaction: discord.Interaction, name: str = None, anime_id: int = None):
+    if name is None and anime_id is None:
+        await interaction.response.send_message('You must provide at least one of `name` or `animeID`.')
+        return
     query = anilist.get_multiple(name=name, anime_id=anime_id, status='RELEASING')
 
     if type(query) == dict:
         try:
+            # TODO add other query fields into DB for use in /tracking (and in line 248)
             collection.insert_one({'_id': query['id'], 'time_until_airing': query['time_until_airing']})
-            await interaction.response.send_mesage(f"Successfully tracking {query['name_romaji']}. "
-                                                   f"Episode {query['episode']} is releasing at <t:{query['airing_at']}> (<t:{query['airing_at']}:R>)")
+            await interaction.response.send_message(f"Successfully tracking ***{query['name_romaji']}***. Episode {query['episode']} is releasing on <t:{query['airing_at']}> "
+                                                    f"(<t:{query['airing_at']}:R>)")
         except KeyError:
-            await interaction.response.send_message(view=View(data=query, ))
+            await interaction.response.send_message(view=View(data=query, send_embed=False, name=name))
+        except pymongo.errors.DuplicateKeyError:
+            await interaction.response.send_message("Already tracking this Anime. ")
     else:
         embed = discord.Embed(colour=discord.Color.from_rgb(255, 0, 0),
                               timestamp=interaction.created_at)
         for error in query:
             embed.add_field(name=error['message'], value=f"Status code: {error['status']}")
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(content="If the error is `404 Not Found`, please enter a currently releasing anime. ", embed=embed)
 
 
 class ConfirmButton(discord.ui.View):
@@ -310,15 +342,27 @@ class ConfirmButton(discord.ui.View):
 
     @discord.ui.button(style=discord.ButtonStyle.red, label='CONFIRM')
     async def on_click(self, interaction: discord.Interaction, button: discord.ui.Button):
-        count = collection.delete_many({})
+        count = collection.delete_many({}).deleted_count
         button.style = discord.ButtonStyle.green
-        await interaction.response.send_message(f"Successfully deleted {count} posts from collection `{collection}`. ")
+        await interaction.response.send_message(f"Successfully deleted **{count}** post/s from collection `{collection.name}`. ", view=self)
+
+
+@app_commands.command()
+async def tracking(interaction: discord.Interaction):
+    currently_tracking = collection.find()
+    message = []
+    for anime in currently_tracking:
+        # TODO
+        message.append(f"{anime}")
 
 
 @app_commands.command()
 async def deleteall(interaction: discord.Interaction):
+    if interaction.user.id != 595802642106548240:
+        await interaction.response.send_message("You are not powerful enough...")
+        return
     button = ConfirmButton()
-    await interaction.response.send_message(content=f"Are you sure you want to remove all posts from `Database: {db}`, `Collection: {collection}`?", view=button)
+    await interaction.response.send_message(content=f"Are you sure you want to remove all posts from `Database: {db.name}`, `Collection: {collection.name}`?", view=button)
 
 
 @app_commands.command()
@@ -345,6 +389,6 @@ async def todo(interaction: discord.Interaction):
 
 
 # TODO REMEMBER TO ADD TO COMMANDS!!!
-commands = [ping, anime, help, todo, test]
+commands = [ping, anime, help, todo, test, track, deleteall]
 
 client.run(TOKEN)
