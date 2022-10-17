@@ -2,11 +2,17 @@ import discord
 from discord import app_commands
 from os import environ
 from dotenv import load_dotenv
-
+import pymongo
 import anilist
 
 load_dotenv()
 TOKEN = environ['TOKEN']
+PASSWORD = environ['PASSWORD']
+
+client = pymongo.MongoClient(f"mongodb+srv://CSA:{PASSWORD}@anibot.o2nqcvj.mongodb.net/?retryWrites=true&w=majority")
+
+db = client['release_tracking']
+collection = db['792309472784547850']
 
 
 class aclient(discord.Client):
@@ -160,7 +166,8 @@ class LinkButton(discord.ui.View):
 
 
 class Options(discord.ui.Select):
-    def __init__(self, data):
+    def __init__(self, data, send_embed: bool = True):
+        self.send_embed = send_embed
         selection = []
 
         media = data['media']
@@ -176,49 +183,56 @@ class Options(discord.ui.Select):
         super().__init__(placeholder=f"Page {page_info['currentPage']} of {page_info['lastPage']}", options=selection, row=0)
 
     async def callback(self, interaction: discord.Interaction):
-        query = anilist.get_anime(int(self.values[0]))
+        if self.send_embed is True:
+            query = anilist.get_anime(int(self.values[0]))
 
-        if query['cover_color'] is not None:
-            r, g, b = hex_to_rgb(query['cover_color'])
-        else:
-            r, g, b = 255, 255, 255
-        query = value_check(query)
+            if query['cover_color'] is not None:
+                r, g, b = hex_to_rgb(query['cover_color'])
+            else:
+                r, g, b = 255, 255, 255
+            query = value_check(query)
 
-        embed = discord.Embed(colour=discord.Color.from_rgb(r, g, b), timestamp=interaction.created_at, title=query['name_romaji'], description=query['name_english'])
-        embed.set_author(name=interaction.user.name, icon_url=interaction.user.avatar)
-        embed = format_embed(embed, query)
+            embed = discord.Embed(colour=discord.Color.from_rgb(r, g, b), timestamp=interaction.created_at, title=query['name_romaji'], description=query['name_english'])
+            embed.set_author(name=interaction.user.name, icon_url=interaction.user.avatar)
+            embed = format_embed(embed, query)
 
-        link_buttons = LinkButton()
+            link_buttons = LinkButton()
 
-        if query['trailer_url'] != 'Not Available':
-            if len(f"{query['name_romaji']} Anilist Page") > 80:
-                link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"AniList Page", url=query['site_url']))
-                link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"Trailer", url=query['trailer_url']))
+            if query['trailer_url'] != 'Not Available':
+                if len(f"{query['name_romaji']} Anilist Page") > 80:
+                    link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"AniList Page", url=query['site_url']))
+                    link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"Trailer", url=query['trailer_url']))
 
-            elif 40 < len(f"{query['name_romaji']} Anilist Page") <= 80:
-                link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} AniList Page", url=query['site_url'], row=1))
-                link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} trailer", url=query['trailer_url'], row=2))
+                elif 40 < len(f"{query['name_romaji']} Anilist Page") <= 80:
+                    link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} AniList Page", url=query['site_url'], row=1))
+                    link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} trailer", url=query['trailer_url'], row=2))
+
+                else:
+                    link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} AniList Page", url=query['site_url']))
+                    link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} trailer", url=query['trailer_url']))
 
             else:
-                link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} AniList Page", url=query['site_url']))
-                link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} trailer", url=query['trailer_url']))
+                if len(f"{query['name_romaji']} Trailer") > 80:
+                    link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"AniList Page", url=query['site_url']))
+                else:
+                    link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} AniList Page", url=query['site_url']))
+
+            await interaction.response.send_message(embed=embed, view=link_buttons)
 
         else:
-            if len(f"{query['name_romaji']} Trailer") > 80:
-                link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"AniList Page", url=query['site_url']))
-            else:
-                link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name_romaji']} AniList Page", url=query['site_url']))
-
-        await interaction.response.send_message(embed=embed, view=link_buttons)
+            query = anilist.get_next_airing_episode(int(self.values[0]))
+            collection.insert_one({'_id': query['id'], 'time_until_airing': query['time_until_airing']})
+            await interaction.response.send_mesage(f"Successfully tracking {query['name_romaji']}. "
+                                                   f"Episode {query['episode']} is releasing at <t:{query['airing_at']}> (<t:{query['airing_at']}:R>)")
 
 
 class View(discord.ui.View):
-    def __init__(self, data, name):
+    def __init__(self, data, name, send_embed: bool = False):
         self.name = name
         self.data = data
         self.page = self.data['pageInfo']['currentPage']
         super().__init__()
-        self.select_class = Options(data=data)
+        self.select_class = Options(data=data, send_embed=send_embed)
         self.add_item(self.select_class)
 
         if self.page == 1:
@@ -274,6 +288,37 @@ class View(discord.ui.View):
 @app_commands.command()
 async def track(interaction: discord.Interaction, name: str, anime_id: int):
     query = anilist.get_multiple(name=name, anime_id=anime_id, status='RELEASING')
+
+    if type(query) == dict:
+        try:
+            collection.insert_one({'_id': query['id'], 'time_until_airing': query['time_until_airing']})
+            await interaction.response.send_mesage(f"Successfully tracking {query['name_romaji']}. "
+                                                   f"Episode {query['episode']} is releasing at <t:{query['airing_at']}> (<t:{query['airing_at']}:R>)")
+        except KeyError:
+            await interaction.response.send_message(view=View(data=query, ))
+    else:
+        embed = discord.Embed(colour=discord.Color.from_rgb(255, 0, 0),
+                              timestamp=interaction.created_at)
+        for error in query:
+            embed.add_field(name=error['message'], value=f"Status code: {error['status']}")
+        await interaction.response.send_message(embed=embed)
+
+
+class ConfirmButton(discord.ui.View):
+    def __init__(self):
+        super().__init__()
+
+    @discord.ui.button(style=discord.ButtonStyle.red, label='CONFIRM')
+    async def on_click(self, interaction: discord.Interaction, button: discord.ui.Button):
+        count = collection.delete_many({})
+        button.style = discord.ButtonStyle.green
+        await interaction.response.send_message(f"Successfully deleted {count} posts from collection `{collection}`. ")
+
+
+@app_commands.command()
+async def deleteall(interaction: discord.Interaction):
+    button = ConfirmButton()
+    await interaction.response.send_message(content=f"Are you sure you want to remove all posts from `Database: {db}`, `Collection: {collection}`?", view=button)
 
 
 @app_commands.command()

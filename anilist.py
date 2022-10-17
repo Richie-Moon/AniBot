@@ -184,6 +184,8 @@ def get_next_airing_episode(anime_id: int):
         title = data['title']
         next_airing_episode = data['nextAiringEpisode']
 
+        _id = data['id']
+
         name_english = title['english']
         name_romaji = title['romaji']
 
@@ -191,7 +193,7 @@ def get_next_airing_episode(anime_id: int):
         time_until_airing = next_airing_episode['timeUntilAiring']
         episode = next_airing_episode['episode']
 
-        formatted_data = {'name_english': name_english, 'name_romaji': name_romaji, 'airing_at': airing_at, 'time_until_airing': time_until_airing, 'episode': episode}
+        formatted_data = {'name_english': name_english, 'name_romaji': name_romaji, 'airing_at': airing_at, 'time_until_airing': time_until_airing, 'episode': episode, 'id': _id}
         return formatted_data
     else:
         return response['errors']
