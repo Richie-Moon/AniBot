@@ -22,7 +22,13 @@ async def update_times():
     tracking = collection.find()
     for anime in tracking:
         query = anilist.get_next_airing_episode(anime['_id'])
-        if query is None:
+        if query['next_airing_episode'] is None:
+            if query['name_romaji'] == query['name_english'] or query['name_english'] is None:
+                await channel.send(f"Episode **{query['episode']}** of ***{query['name_romaji']}*** just aired!\n"
+                                   f"[{query['name_romaji']} AniList Page](https://anilist.co/anime/{query['id']}/)")
+            else:
+                await channel.send(f"Episode **{query['episode']}** of ***{query['name_romaji']} ({query['name_english']})*** just aired!"
+                                   f"[{query['name_romaji']} AniList Page](https://anilist.co/anime/{query['id']}/)")
             collection.delete_one({'_id': anime['id']})
 
         elif query['time_until_airing'] > anime['time_until_airing']:
@@ -32,8 +38,9 @@ async def update_times():
             else:
                 await channel.send(f"Episode **{query['episode']}** of ***{query['name_romaji']} ({query['name_english']})*** just aired!"
                                    f"[{query['name_romaji']} AniList Page](https://anilist.co/anime/{query['id']}/)")
+            collection.update_one({'_id': query['id']}, {'$set': {'time_until_airing': query['time_until_airing'], 'episode': query['episode']}})
         else:
-            collection.update_one({'_id': query['id']}, {'$set': {'time_until_airing': query['time_until_airing']}})
+            collection.update_one({'_id': query['id']}, {'$set': {'time_until_airing': query['time_until_airing'], 'episode': query['episode']}})
 
 
 class aclient(discord.Client):
@@ -245,7 +252,8 @@ class Options(discord.ui.Select):
         else:
             try:
                 query = anilist.get_next_airing_episode(int(self.values[0]))
-                collection.insert_one({'_id': query['id'], 'time_until_airing': query['time_until_airing']})
+                collection.insert_one({'_id': query['id'], 'time_until_airing': query['time_until_airing'], 'name_english': query['name_english'], 'name_romaji': query['name_romaji'],
+                                       'airing_at': query['airing_at'], 'episode': query['episode']})
                 await interaction.response.send_mesage(f"Successfully tracking {query['name_romaji']}. "
                                                        f"Episode {query['episode']} is releasing at <t:{query['airing_at']}> (<t:{query['airing_at']}:R>)")
             except pymongo.errors.DuplicateKeyError:
@@ -320,8 +328,8 @@ async def track(interaction: discord.Interaction, name: str = None, anime_id: in
 
     if type(query) == dict:
         try:
-            # TODO add other query fields into DB for use in /tracking (and in line 248)
-            collection.insert_one({'_id': query['id'], 'time_until_airing': query['time_until_airing']})
+            collection.insert_one({'_id': query['id'], 'time_until_airing': query['time_until_airing'], 'name_english': query['name_english'], 'name_romaji': query['name_romaji'],
+                                   'airing_at': query['airing_at'], 'episode': query['episode']})
             await interaction.response.send_message(f"Successfully tracking ***{query['name_romaji']}***. Episode {query['episode']} is releasing on <t:{query['airing_at']}> "
                                                     f"(<t:{query['airing_at']}:R>)")
         except KeyError:
@@ -342,9 +350,12 @@ class ConfirmButton(discord.ui.View):
 
     @discord.ui.button(style=discord.ButtonStyle.red, label='CONFIRM')
     async def on_click(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != 595802642106548240:
+            await interaction.response.send_message("You are not powerful enough...")
+            return
         count = collection.delete_many({}).deleted_count
         button.style = discord.ButtonStyle.green
-        await interaction.response.send_message(f"Successfully deleted **{count}** post/s from collection `{collection.name}`. ", view=self)
+        await interaction.response.edit_message(content=f"Successfully deleted **{count}** post/s from collection `{collection.name}`. ", view=self)
 
 
 @app_commands.command()
@@ -352,8 +363,11 @@ async def tracking(interaction: discord.Interaction):
     currently_tracking = collection.find()
     message = []
     for anime in currently_tracking:
-        # TODO
-        message.append(f"{anime}")
+        if anime['name_romaji'] == anime['name_english'] or anime['name_english'] is None:
+            message.append(f"**{anime['name_romaji']}**: Episode {anime['episode']}: <t:{anime['airing_at']}> <t:{anime['airing_at']}:R>")
+        else:
+            message.append(f"**{anime['name_romaji']} ({anime['name_english']})**: Episode {anime['episode']}: <t:{anime['airing_at']}> <t:{anime['airing_at']}:R>")
+    await interaction.response.send_message("***Currently Tracking:***\n" + '\n'.join(message))
 
 
 @app_commands.command()
@@ -389,6 +403,6 @@ async def todo(interaction: discord.Interaction):
 
 
 # TODO REMEMBER TO ADD TO COMMANDS!!!
-commands = [ping, anime, help, todo, test, track, deleteall]
+commands = [ping, anime, help, todo, test, track, deleteall, tracking]
 
 client.run(TOKEN)

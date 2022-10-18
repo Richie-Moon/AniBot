@@ -18,7 +18,4 @@ client = pymongo.MongoClient(f"mongodb+srv://CSA:{PASSWORD}@anibot.o2nqcvj.mongo
 db = client['release_tracking']
 collection = db['792309472784547850']
 
-collection.insert_one({'_id': 127230})
-
-print(anilist.get_next_airing_episode(108489))
 # replace('~', '||'), replace('!', ''), replace('__', '**')

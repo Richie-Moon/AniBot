@@ -192,13 +192,13 @@ def get_next_airing_episode(anime_id: int):
         name_romaji = title['romaji']
 
         if next_airing_episode is None:
-            return None
+            return {'name_english': name_english, 'name_romaji': name_romaji, 'id': _id, 'next_airing_episode': None}
 
         airing_at = next_airing_episode['airingAt']
         time_until_airing = next_airing_episode['timeUntilAiring']
         episode = next_airing_episode['episode']
 
-        formatted_data = {'name_english': name_english, 'name_romaji': name_romaji, 'airing_at': airing_at, 'time_until_airing': time_until_airing, 'episode': episode, 'id': _id}
+        formatted_data = {'name_english': name_english, 'name_romaji': name_romaji, 'airing_at': airing_at, 'time_until_airing': time_until_airing, 'episode': episode, 'id': _id, 'next_airing_episode': True}
         return formatted_data
     else:
         return response['errors']
