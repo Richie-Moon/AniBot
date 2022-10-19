@@ -19,29 +19,28 @@ collection = db['792309472784547850']
 
 @tasks.loop(minutes=1.0)
 async def update_times():
+    embed = discord.Embed()
     channel = client.get_channel(1016581439002783784)
     tracking = collection.find()
     for anime in tracking:
         query = anilist.get_next_airing_episode(anime['_id'])
+        embed.description = f"[{query['name_romaji']} AniList Page](https://anilist.co/anime/{query['id']}/)"
         if query['next_airing_episode'] is None:
             if query['name_romaji'] == query['name_english'] or query['name_english'] is None:
-                await channel.send(f"Episode **{query['episode']}** of ***{query['name_romaji']}*** just aired!\n"
-                                   f"[{query['name_romaji']} AniList Page](https://anilist.co/anime/{query['id']}/)")
+                embed.title = f"Episode {query['episode']} of {query['name_romaji']} just aired!"
             else:
-                await channel.send(f"Episode **{query['episode']}** of ***{query['name_romaji']} ({query['name_english']})*** just aired!"
-                                   f"[{query['name_romaji']} AniList Page](https://anilist.co/anime/{query['id']}/)")
+                embed.title = f"Episode {query['episode']} of {query['name_romaji']} ({query['name_english']}) just aired"
             collection.delete_one({'_id': anime['id']})
 
         elif query['time_until_airing'] >= anime['time_until_airing']:
             if query['name_romaji'] == query['name_english'] or query['name_english'] is None:
-                await channel.send(f"Episode **{query['episode']}** of ***{query['name_romaji']}*** just aired!\n"
-                                   f"[{query['name_romaji']} AniList Page](https://anilist.co/anime/{query['id']}/)")
+                embed.title = f"Episode {query['episode']} of {query['name_romaji']} just aired!"
             else:
-                await channel.send(f"Episode **{query['episode']}** of ***{query['name_romaji']} ({query['name_english']})*** just aired!\n"
-                                   f"[{query['name_romaji']} AniList Page](https://anilist.co/anime/{query['id']}/)")
+                embed.title = f"Episode {query['episode']} of {query['name_romaji']} ({query['name_english']}) just aired"
             collection.update_one({'_id': query['id']}, {'$set': {'time_until_airing': query['time_until_airing'], 'episode': query['episode'], 'airing_at': query['airing_at']}})
         else:
             collection.update_one({'_id': query['id']}, {'$set': {'time_until_airing': query['time_until_airing'], 'episode': query['episode']}})
+        await channel.send(embed=embed)
 
 
 class aclient(discord.Client):
@@ -177,7 +176,7 @@ async def anime(interaction: discord.Interaction, name: str = None, anime_id: in
                 await interaction.response.send_message(embed=embed, view=link_buttons)
 
             except KeyError:
-                await interaction.response.send_message(content='The `lastPage` number may be wrong due to API restrictions. ', view=View(query, name))
+                await interaction.response.send_message(content='The `lastPage` number may be wrong due to API restrictions. ', view=View(query, name, send_embed=True))
 
         elif type(query) == list:
             embed = discord.Embed(colour=discord.Color.from_rgb(255, 0, 0), timestamp=interaction.created_at)
