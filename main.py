@@ -30,6 +30,7 @@ async def update_times():
                 embed.title = f"Episode {query['episode']} of {query['name_romaji']} just aired!"
             else:
                 embed.title = f"Episode {query['episode']} of {query['name_romaji']} ({query['name_english']}) just aired"
+            await channel.send(embed=embed)
             collection.delete_one({'_id': anime['id']})
 
         elif query['time_until_airing'] >= anime['time_until_airing']:
@@ -37,10 +38,10 @@ async def update_times():
                 embed.title = f"Episode {query['episode']} of {query['name_romaji']} just aired!"
             else:
                 embed.title = f"Episode {query['episode']} of {query['name_romaji']} ({query['name_english']}) just aired"
+            await channel.send(embed=embed)
             collection.update_one({'_id': query['id']}, {'$set': {'time_until_airing': query['time_until_airing'], 'episode': query['episode'], 'airing_at': query['airing_at']}})
         else:
             collection.update_one({'_id': query['id']}, {'$set': {'time_until_airing': query['time_until_airing'], 'episode': query['episode']}})
-        await channel.send(embed=embed)
 
 
 class aclient(discord.Client):
