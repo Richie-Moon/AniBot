@@ -378,9 +378,9 @@ async def tracking(interaction: discord.Interaction):
     message = []
     for anime in currently_tracking:
         if anime['name_romaji'] == anime['name_english'] or anime['name_english'] is None:
-            message.append(f"**{anime['name_romaji']}** Episode {anime['episode']}: <t:{anime['airing_at']}> (<t:{anime['airing_at']}:R>)")
+            message.append(f"**{anime['name_romaji']}** Episode {anime['episode']}: <t:{anime['airing_at']}:T> (<t:{anime['airing_at']}:R>)")
         else:
-            message.append(f"**{anime['name_romaji']} ({anime['name_english']})**: Episode {anime['episode']}: <t:{anime['airing_at']}> (<t:{anime['airing_at']}:R>)")
+            message.append(f"**{anime['name_romaji']} ({anime['name_english']})**: Episode {anime['episode']}: <t:{anime['airing_at']}:T> (<t:{anime['airing_at']}:R>)")
     await interaction.response.send_message("***Currently Tracking:***\n" + '\n'.join(message))
 
 
