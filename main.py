@@ -69,7 +69,7 @@ client = aclient()
 tree = app_commands.CommandTree(client)
 
 
-@app_commands.command()
+@app_commands.command(description="Displays client latency. ")
 async def ping(interaction: discord.Interaction):
     await interaction.response.send_message(f'{round(client.latency * 1000)}ms')
 
@@ -137,7 +137,7 @@ def format_embed(embed, data) -> discord.Embed:
     return embed
 
 
-@app_commands.command()
+@app_commands.command(description="Returns with anime information. Will send a dropdown menu if multiple anime are found. ")
 async def anime(interaction: discord.Interaction, name: str = None, anime_id: int = None):
     if name is None and anime_id is None:
         await interaction.response.send_message("Please provide at least one of `name` or `animeID`")
@@ -328,7 +328,7 @@ class View(discord.ui.View):
         await interaction.response.edit_message(view=self)
 
 
-@app_commands.command()
+@app_commands.command(description="Adds an anime to track when new episodes are released. ")
 async def track(interaction: discord.Interaction, name: str = None, anime_id: int = None):
     await interaction.response.defer()
     if name is None and anime_id is None:
@@ -372,19 +372,19 @@ class ConfirmButton(discord.ui.View):
         await interaction.response.edit_message(content=f"Successfully deleted **{count}** post/s from collection `{collection.name}`. ", view=self)
 
 
-@app_commands.command()
+@app_commands.command(description="Displays all the anime whose releases are currently being tracked")
 async def tracking(interaction: discord.Interaction):
     currently_tracking = collection.find()
     message = []
     for anime in currently_tracking:
         if anime['name_romaji'] == anime['name_english'] or anime['name_english'] is None:
-            message.append(f"**{anime['name_romaji']}** Episode {anime['episode']}: <t:{anime['airing_at']}:T> (<t:{anime['airing_at']}:R>)")
+            message.append(f"**{anime['name_romaji']}** Episode {anime['episode']}: <t:{anime['airing_at']}:F> (<t:{anime['airing_at']}:R>)")
         else:
-            message.append(f"**{anime['name_romaji']} ({anime['name_english']})**: Episode {anime['episode']}: <t:{anime['airing_at']}:T> (<t:{anime['airing_at']}:R>)")
+            message.append(f"**{anime['name_romaji']} ({anime['name_english']})**: Episode {anime['episode']}: <t:{anime['airing_at']}:F> (<t:{anime['airing_at']}:R>)")
     await interaction.response.send_message("***Currently Tracking:***\n" + '\n'.join(message))
 
 
-@app_commands.command()
+@app_commands.command(description='Untracks an anime whose releases are currently being tracked. ')
 async def untrack(interaction: discord.Interaction, name: str = None, anime_id: int = None):
     await interaction.response.defer()
 
@@ -411,7 +411,7 @@ async def untrack(interaction: discord.Interaction, name: str = None, anime_id: 
         await interaction.followup.send(content="If the error is `404 Not Found`, please enter a currently releasing anime. ", embed=embed)
 
 
-@app_commands.command()
+@app_commands.command(description="You are not powerful enough... (unless your name is Richie Moon)")
 async def deleteall(interaction: discord.Interaction):
     if interaction.user.id != 595802642106548240:
         await interaction.response.send_message("You are not powerful enough...")
@@ -420,7 +420,7 @@ async def deleteall(interaction: discord.Interaction):
     await interaction.response.send_message(content=f"Are you sure you want to remove all posts from `Database: {db.name}`, `Collection: {collection.name}`?", view=button)
 
 
-@app_commands.command()
+@app_commands.command(description='Imagine needing help.')
 async def help(interaction: discord.Interaction):
     fields = {"`/anime <anime name>`": "Get anime info from Anilist.", "`/ping`": "Displays latency.", '`/todo`': "Shows the things that Richie is too lazy to implement. "}
     embed = discord.Embed(colour=discord.Color.from_rgb(255, 255, 255), timestamp=interaction.created_at, title="Help")
@@ -437,7 +437,7 @@ async def test(interaction: discord.Interaction, number: int):
     await interaction.response.send_message(number)
 
 
-@app_commands.command()
+@app_commands.command(description="Displays Richie's to-do list.")
 async def todo(interaction: discord.Interaction):
     todo_list = ["send message when new episode is released. ", 'sex', 'characters', 'user']
     await interaction.response.send_message('\n'.join(todo_list))
