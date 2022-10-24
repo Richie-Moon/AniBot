@@ -27,17 +27,17 @@ async def update_times():
         embed.description = f"[{query['name_romaji']} AniList Page](https://anilist.co/anime/{query['id']}/)"
         if query['next_airing_episode'] is None:
             if query['name_romaji'] == query['name_english'] or query['name_english'] is None:
-                embed.title = f"Episode {query['episode']} of {query['name_romaji']} just aired!"
+                embed.title = f"Episode {query['episode'] - 1} of {query['name_romaji']} just aired!"
             else:
-                embed.title = f"Episode {query['episode']} of {query['name_romaji']} ({query['name_english']}) just aired"
+                embed.title = f"Episode {query['episode'] - 1} of {query['name_romaji']} ({query['name_english']}) just aired!"
             await channel.send(embed=embed)
             collection.delete_one({'_id': anime['id']})
 
         elif query['time_until_airing'] >= anime['time_until_airing']:
             if query['name_romaji'] == query['name_english'] or query['name_english'] is None:
-                embed.title = f"Episode {query['episode']} of {query['name_romaji']} just aired!"
+                embed.title = f"Episode {query['episode'] - 1} of {query['name_romaji']} just aired!"
             else:
-                embed.title = f"Episode {query['episode']} of {query['name_romaji']} ({query['name_english']}) just aired"
+                embed.title = f"Episode {query['episode'] - 1} of {query['name_romaji']} ({query['name_english']}) just aired!"
             await channel.send(embed=embed)
             collection.update_one({'_id': query['id']}, {'$set': {'time_until_airing': query['time_until_airing'], 'episode': query['episode'], 'airing_at': query['airing_at']}})
         else:
