@@ -4,7 +4,7 @@ import json
 url = 'https://graphql.anilist.co'
 
 
-def get_multiple(name, anime_id: int = None, page: int = 1, status: str = None):
+def get_multiple(name: str, anime_id: int = None, page: int = 1, status: str = None):
     """Responds with multiple anime which fit the search criteria (name and anime_id). Providing anime_id will always return 1 result.
     If only 1 anime is retrieved, the function will automatically query get_anime() using the id, returning full data. """
     query = """
@@ -146,7 +146,7 @@ def get_anime(anime_id: int):
             if data['trailer']['site'] == 'youtube':
                 trailer_url = f"https://youtube.com/watch?v={data['trailer']['id']}"
             else:
-                trailer_url = f"https://dailymotion.com/video/{data['traier']['id']}"
+                trailer_url = f"https://dailymotion.com/video/{data['trailer']['id']}"
         formatted_data = {'_id': _id, 'name_romaji': name_romaji, 'name_english': name_english, 'start_date': start_date, 'end_date': end_date, 'cover_image': cover_image,
                           'banner_image': banner_image, 'cover_color': cover_color, 'airing_format': airing_format, 'airing_status': airing_status, 'airing_episodes': airing_episodes,
                           'next_airing_episode': next_airing_episode, 'season': season, 'episode_duration': episode_duration, 'desc': description, 'average_score': average_score,
@@ -202,3 +202,108 @@ def get_next_airing_episode(anime_id: int):
         return formatted_data
     else:
         return response['errors']
+
+
+def get_character(char_id: int):
+    query = """
+    query ($id: Int) {
+        Character (id: $id) {
+            id
+            name {
+                full
+                alternative
+            }
+            description (asHtml: false)
+            dateOfBirth {
+                year
+                month
+                day
+            }
+            gender
+            age
+            siteUrl
+            media {
+                edges {
+                    node {
+                        title {
+                            romaji
+                            english
+                        }
+                        type
+                    }
+                }
+            }
+        }
+    }
+    """
+
+    variables = {'id': char_id}
+
+    response = json.loads(requests.post(url=url, json={'query': query, 'variables': variables}).text)
+    print(response)
+
+    data = response['data']
+
+    if data is not None:
+        data = data['Character']
+
+        _id = data['id']
+        name = data['name']['full']
+        alt_names = data['name']['alternative']
+        description = data['description']
+        gender = data['gender']
+        age = data['age']
+        site_url = data['siteUrl']
+        birthdate = f"{data['dateOfBirth']['day']}/{data['dateOfBirth']['month']}/{data['dateOfBirth']['year']}"
+        appears_in = []
+        for media in data['media']['edges']:
+            node = media['node']
+            appears_in.append({'type': node['type'].lower(), 'name_english': node['title']['english'], 'name_romaji': node['title']['romaji']})
+
+        formatted_data = {'id': _id, 'name': name, 'alt_names': alt_names, 'description': description, 'gender': gender, 'age': age, 'site_url': site_url, 'birthdate': birthdate, 'appears_in': appears_in}
+
+        return formatted_data
+    else:
+        return response['errors']
+
+
+def get_characters(name: str, char_id: int = None, page: int = 1):
+    query = """
+    query ($name: String, $id: Int, $page: Int, $per_page: Int) {
+        Page (page: $page, perPage: $per_page) {
+            pageInfo {
+                total
+                currentPage
+                lastPage
+                hasNextPage
+            }
+            
+            characters (search: $name, id: $id) {
+                id
+                name {
+                    full
+                    alternative
+                }
+                gender
+                media {
+                    edges {
+                        node {
+                            title {
+                                english
+                                romaji
+                            }
+                        }
+                    }
+                }
+                
+            }
+        }
+    }
+    """
+    
+    variables = {'per_page': 25}
+    if name is not None:
+        variables['name'] = name
+    if char_id is not None:
+        variables['id'] = char_id
+    variables['page'] = page

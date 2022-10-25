@@ -378,9 +378,9 @@ async def tracking(interaction: discord.Interaction):
     message = []
     for anime in currently_tracking:
         if anime['name_romaji'] == anime['name_english'] or anime['name_english'] is None:
-            message.append(f"**{anime['name_romaji']}** Episode {anime['episode']}: <t:{anime['airing_at']}:F> (<t:{anime['airing_at']}:R>)")
+            message.append(f"**{anime['name_romaji']}** - Episode {anime['episode']}: <t:{anime['airing_at']}:F> (<t:{anime['airing_at']}:R>)")
         else:
-            message.append(f"**{anime['name_romaji']} ({anime['name_english']})**: Episode {anime['episode']}: <t:{anime['airing_at']}:F> (<t:{anime['airing_at']}:R>)")
+            message.append(f"**{anime['name_romaji']} ({anime['name_english']})** - Episode {anime['episode']}: <t:{anime['airing_at']}:F> (<t:{anime['airing_at']}:R>)")
     await interaction.response.send_message("***Currently Tracking:***\n" + '\n'.join(message))
 
 
@@ -433,13 +433,13 @@ async def help(interaction: discord.Interaction):
 
 
 @app_commands.command()
-async def test(interaction: discord.Interaction, number: int):
-    await interaction.response.send_message(number)
+async def test(interaction: discord.Interaction):
+    pass
 
 
 @app_commands.command(description="Displays Richie's to-do list.")
 async def todo(interaction: discord.Interaction):
-    todo_list = ["send message when new episode is released. ", 'sex', 'characters', 'user']
+    todo_list = ['sex', 'characters', 'user']
     await interaction.response.send_message('\n'.join(todo_list))
 
 
