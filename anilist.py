@@ -260,7 +260,8 @@ def get_character(char_id: int):
             node = media['node']
             appears_in.append({'type': node['type'].lower(), 'name_english': node['title']['english'], 'name_romaji': node['title']['romaji']})
 
-        formatted_data = {'id': _id, 'name': name, 'alt_names': alt_names, 'description': description, 'gender': gender, 'age': age, 'site_url': site_url, 'birthdate': birthdate, 'appears_in': appears_in}
+        formatted_data = {'id': _id, 'name': name, 'alt_names': alt_names, 'description': description, 'gender': gender, 'age': age, 'site_url': site_url, 'birthdate': birthdate,
+                          'appears_in': appears_in}
 
         return formatted_data
     else:
@@ -307,3 +308,14 @@ def get_characters(name: str, char_id: int = None, page: int = 1):
     if char_id is not None:
         variables['id'] = char_id
     variables['page'] = page
+
+    response = json.loads(requests.post(url=url, json={'query': query, 'variables': variables}).text)
+    data = response['data']['Page']
+
+    if data is not None:
+        if len(data['characters']) == 0:
+            return [{'message': 'Not Found', 'status': 404}]
+        elif len(data['characters']) == 1:
+            return get_character(data['characters'][0]['id'])
+        else:
+            return data

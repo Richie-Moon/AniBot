@@ -18,6 +18,7 @@ client = pymongo.MongoClient(f"mongodb+srv://CSA:{PASSWORD}@anibot.o2nqcvj.mongo
 
 db = client['release_tracking']
 collection = db['792309472784547850']
+test = db['test']
 
 
 # query ($name: String = "Levi", $page: Int = 1) {
@@ -53,5 +54,10 @@ collection = db['792309472784547850']
 # }
 
 print(anilist.get_character(66171))
+
+print(test.insert_one({'_id': 0, 'name': 'John'}))
+x = test.find_one({"_id": 0})
+
+print(x['name'])
 
 # replace('~', '||'), replace('!', ''), replace('__', '**')
