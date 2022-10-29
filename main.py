@@ -6,7 +6,7 @@ import pymongo
 import anilist
 from discord.ext import tasks, commands
 from pymongo import errors
-import aiohttp
+import utility
 
 load_dotenv()
 TOKEN = environ['TOKEN']
@@ -48,34 +48,33 @@ async def update_times():
 class Bot(commands.Bot):
     def __init__(self):
         super().__init__(intents=discord.Intents.all(), application_id=1026407754899931189, command_prefix='-')
-        self.synced = False
 
     async def setup_hook(self) -> None:
         await self.load_extension(f"cogs.character")
         await self.load_extension(f"cogs.anime")
-        self.session = aiohttp.ClientSession()
-
-    async def close(self):
-        await super().close()
-        await self.session.close()
-
-    async def on_ready(self):
-        await self.wait_until_ready()
-
-        client.tree.clear_commands(guild=None)
-        for command in commands:
+        for command in c:
             client.tree.add_command(command)
 
-        if not self.synced:
-            await client.tree.sync()
-            self.synced = True
-
+    async def on_ready(self):
         update_times.start()
 
         print(f"Logged in as {self.user}")
 
 
 client = Bot()
+
+
+@client.command()
+async def sync(ctx):
+    synced = await ctx.bot.tree.sync()
+    for c in synced:
+        print(c)
+    await ctx.send(f"Synced {len(synced)} commands.")
+
+
+@client.command()
+async def commands(ctx):
+    await ctx.send('\n'.join(ctx.bot.tree.get_commands()))
 
 
 @app_commands.command(description="Displays client latency. ")
@@ -102,7 +101,7 @@ async def track(interaction: discord.Interaction, name: str = None, anime_id: in
                 await interaction.followup.send(f"Successfully tracking ***{query['name_romaji']} ({query['name_english']})***. Episode {query['episode']} is releasing on <t:{query['airing_at']}> "
                                                 f"(<t:{query['airing_at']}:R>)")
         except KeyError:
-            await interaction.response.send_message(view=View(data=query, name=name, remove=False))
+            await interaction.response.send_message(view=utility.View(data=query, name=name, remove=False))
         except pymongo.errors.DuplicateKeyError:
             await interaction.followup.send("Already tracking this Anime. ")
     else:
@@ -157,7 +156,7 @@ async def untrack(interaction: discord.Interaction, name: str = None, anime_id: 
             else:
                 await interaction.followup.send(f"Successfully untracked **{query['name_romaji']} ({query['name_english']})**.")
         except KeyError:
-            await interaction.response.send_message(view=View(data=query, name=name, remove=True))
+            await interaction.response.send_message(view=utility.View(data=query, name=name, remove=True))
     else:
         embed = discord.Embed(colour=discord.Color.from_rgb(255, 0, 0),
                               timestamp=interaction.created_at)
@@ -187,102 +186,6 @@ async def help(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed)
 
 
-class View(discord.ui.View):
-    def __init__(self, data, name, remove: bool = False):
-        self.name = name
-        self.data = data
-        self.page = self.data['pageInfo']['currentPage']
-        super().__init__()
-
-        self.select_class = Options(data=data, remove=remove)
-        self.add_item(self.select_class)
-
-        if self.page == 1:
-            self.left.disabled = True
-        else:
-            self.left.disabled = False
-
-        has_next_page = self.data['pageInfo']['hasNextPage']
-        if has_next_page is True:
-            self.right.disabled = False
-        else:
-            self.right.disabled = True
-
-    def reset_buttons(self):
-        self.right.disabled = False
-        self.left.disabled = False
-
-    @discord.ui.button(style=discord.ButtonStyle.primary, row=1, emoji='\U000025c0')
-    async def left(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.remove_item(self.select_class)
-        query = anilist.get_multiple(name=self.name, anime_id=None, page=self.page - 1)
-        self.select_class = Options(query)
-
-        self.add_item(self.select_class)
-
-        self.reset_buttons()
-
-        if query['pageInfo']['currentPage'] == 1:
-            button.disabled = True
-        else:
-            button.disabled = False
-
-        await interaction.response.edit_message(view=self)
-
-    @discord.ui.button(style=discord.ButtonStyle.primary, row=1, emoji='\U000025b6')
-    async def right(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.remove_item(self.select_class)
-        query = anilist.get_multiple(name=self.name, anime_id=None, page=self.page + 1)
-
-        self.select_class = Options(query)
-        self.add_item(self.select_class)
-
-        self.reset_buttons()
-
-        if query['pageInfo']['hasNextPage'] is True:
-            button.disabled = False
-        else:
-            button.disabled = True
-
-        await interaction.response.edit_message(view=self)
-
-
-class Options(discord.ui.Select):
-    def __init__(self, data, remove: bool = False):
-        self.remove = remove
-
-        selection = []
-        media = data['media']
-        page_info = media['pageInfo']
-
-        for item in media:
-            title = item['title']
-            if title['romaji'] == title['english']:
-                selection.append(discord.SelectOption(label=title['romaji'], value=item['id']))
-            else:
-                selection.append(discord.SelectOption(label=title['romaji'], description=title['english'], value=item['id']))
-
-        super().__init__(options=selection, placeholder=f"Page {page_info['currentPage']} of {page_info['lastPage']}")
-
-    async def callback(self, interaction: discord.Interaction):
-        if self.remove is True:
-            post = collection.find_one_and_delete({'_id': int(self.values[0])})
-            if post['name_romaji'] == post['name_english'] or post['name_english'] is None:
-                await interaction.response.send_message(f"Successfully untracked **{post['name_romaji']}**")
-            else:
-                await interaction.response.send_message(f"Successfully untracked **{post['name_romaji']} ({post['name_english']})**")
-
-        else:
-            try:
-                query = anilist.get_next_airing_episode(int(self.values[0]))
-                collection.insert_one({'_id': query['id'], 'time_until_airing': query['time_until_airing'], 'name_english': query['name_english'], 'name_romaji': query['name_romaji'],
-                                       'airing_at': query['airing_at'], 'episode': query['episode']})
-                await interaction.response.send_mesage(f"Successfully tracking {query['name_romaji']}. "
-                                                       f"Episode {query['episode']} is releasing at <t:{query['airing_at']}> (<t:{query['airing_at']}:R>)")
-            except pymongo.errors.DuplicateKeyError:
-                await interaction.response.send_message('This anime is already being tracked. ')
-
-
 @app_commands.command()
 async def test(interaction: discord.Interaction):
     pass
@@ -295,6 +198,6 @@ async def todo(interaction: discord.Interaction):
 
 
 # TODO REMEMBER TO ADD TO COMMANDS!!!
-commands = [ping, help, todo, test, track, deleteall, tracking, untrack]
+c = [ping, help, todo, test, track, deleteall, tracking, untrack]
 
 client.run(TOKEN)

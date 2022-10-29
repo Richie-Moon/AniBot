@@ -179,7 +179,6 @@ def get_next_airing_episode(anime_id: int):
     variables = {'id': anime_id}
 
     response = json.loads(requests.post(url, json={'query': query, 'variables': variables}).text)
-    print(response)
     data = response['data']['Media']
 
     if data is not None:

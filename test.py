@@ -55,9 +55,5 @@ test = db['test']
 
 print(anilist.get_character(66171))
 
-print(test.insert_one({'_id': 0, 'name': 'John'}))
-x = test.find_one({"_id": 0})
-
-print(x['name'])
 
 # replace('~', '||'), replace('!', ''), replace('__', '**')
