@@ -17,11 +17,16 @@ class Character(commands.Cog):
 
         try:
             query = anilist.get_characters(name=name, char_id=character_id)
+            if type(query) == dict:
+                pass
+            elif type(query) == list:
+                pass
 
+        except Exception as e:
+            embed = discord.Embed(colour=discord.Color.from_rgb(255, 0, 0), timestamp=interaction.created_at)
+            embed.add_field(name='Error', value=e)
 
-        except ValueError:
-            # send dropdown
-            return
+            await interaction.response.send_message(embed=embed)
 
 
 async def setup(bot: commands.Bot):

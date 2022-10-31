@@ -97,9 +97,10 @@ class Options(discord.ui.Select):
         if self.remove is True:
             post = collection.find_one_and_delete({'_id': int(self.values[0])})
             if post['name_romaji'] == post['name_english'] or post['name_english'] is None:
-                await interaction.response.send_message(f"Successfully untracked **{post['name_romaji']}**")
+                await interaction.followup.send(f"Successfully untracked **{post['name_romaji']}**")
             else:
-                await interaction.response.send_message(f"Successfully untracked **{post['name_romaji']} ({post['name_english']})**")
+                await interaction.followup.send(f"Successfully untracked **{post['name_romaji']} ({post['name_english']})**")
+            return
 
         query = anilist.get_anime(int(self.values[0]))
 
@@ -141,7 +142,7 @@ class LinkButton(discord.ui.View):
 
 
 class View(discord.ui.View):
-    def __init__(self, data, name, remove: bool):
+    def __init__(self, data, name, remove: bool, char: bool = False):
         self.name = name
         self.data = data
         self.page = self.data['pageInfo']['currentPage']
@@ -200,3 +201,26 @@ class View(discord.ui.View):
 
         await interaction.followup.edit_message(interaction.message.id, view=self)
 
+
+class CharOptions(discord.ui.Select):
+    def __init__(self, data):
+        characters = data['characters']
+        page_info = data['pageIngo']
+        selection = []
+
+        for character in characters:
+            option = discord.SelectOption(label=character['name']['full'], value=character['id'], description=character['media']['edges'][0]['node']['title']['romaji'])
+            if character['gender'] == 'Male':
+                option.emoji = '\U00002642'
+            elif character['gender'] == 'Female':
+                option.emoji = '\U00002640'
+
+            selection.append(option)
+
+        super().__init__(options=selection, placeholder=f"Page {page_info['currentPage']} of {page_info['lastPage']}", row=0)
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+        query = anilist.get_character(char_id=int(self.values[0]))
+        

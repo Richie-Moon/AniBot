@@ -282,7 +282,6 @@ def get_characters(name: str, char_id: int = None, page: int = 1):
                 id
                 name {
                     full
-                    alternative
                 }
                 gender
                 media {

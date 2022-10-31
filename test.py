@@ -53,7 +53,7 @@ test = db['test']
 #   }
 # }
 
-print(anilist.get_character(66171))
+print(anilist.get_character(21))
 
 
 # replace('~', '||'), replace('!', ''), replace('__', '**')
