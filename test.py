@@ -14,46 +14,14 @@ import requests
 load_dotenv()
 PASSWORD = environ['PASSWORD']
 
-client = pymongo.MongoClient(f"mongodb+srv://CSA:{PASSWORD}@anibot.o2nqcvj.mongodb.net/?retryWrites=true&w=majority")
-
-db = client['release_tracking']
-collection = db['792309472784547850']
-test = db['test']
-
-
-# query ($name: String = "Levi", $page: Int = 1) {
-#   Page (page: $page) {
-#     pageInfo {
-#       total
-#       currentPage
+# client = pymongo.MongoClient(f"mongodb+srv://CSA:{PASSWORD}@anibot.o2nqcvj.mongodb.net/?retryWrites=true&w=majority")
 #
-#     }
-#     characters(search: $name) {
-#       id
-#       name {
-#         full
-#       }
-#       description (asHtml: false)
-#       dateOfBirth
-#       gender
-#       age
-#       siteUrl
-#       media {
-#         edges {
-#           node {
-#             title {
-#               english
-#               romaji
-#             }
-#             type
-#           }
-#         }
-#       }
-#     }
-#   }
-# }
+# db = client['release_tracking']
+# collection = db['792309472784547850']
+# test = db['test']
+#
 
-print(anilist.get_character(21))
+print(anilist.get_characters('Levi'))
 
 
 # replace('~', '||'), replace('!', ''), replace('__', '**')

@@ -212,6 +212,9 @@ def get_character(char_id: int):
                 full
                 alternative
             }
+            image {
+                large
+            }
             description (asHtml: false)
             dateOfBirth {
                 year
@@ -221,7 +224,7 @@ def get_character(char_id: int):
             gender
             age
             siteUrl
-            media {
+            media (sort: POPULARITY) {
                 edges {
                     node {
                         title {
@@ -260,7 +263,7 @@ def get_character(char_id: int):
             appears_in.append({'type': node['type'].lower(), 'name_english': node['title']['english'], 'name_romaji': node['title']['romaji']})
 
         formatted_data = {'id': _id, 'name': name, 'alt_names': alt_names, 'description': description, 'gender': gender, 'age': age, 'site_url': site_url, 'birthdate': birthdate,
-                          'appears_in': appears_in}
+                          'appears_in': appears_in, 'multiple': False}
 
         return formatted_data
     else:
@@ -316,4 +319,5 @@ def get_characters(name: str, char_id: int = None, page: int = 1):
         elif len(data['characters']) == 1:
             return get_character(data['characters'][0]['id'])
         else:
+            data['multiple'] = True
             return data

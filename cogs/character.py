@@ -18,9 +18,25 @@ class Character(commands.Cog):
         try:
             query = anilist.get_characters(name=name, char_id=character_id)
             if type(query) == dict:
-                pass
+                if query['multiple'] is True:
+                    view = utility.View(data=query, name=name, remove=False, char=True)
+                    await interaction.response.send_message(content='The `lastPage` number may be wrong due to API restrictions.', view=view)
+                else:
+                    query = utility.char_value_check(query)
+
+                    embed = discord.Embed(colour=discord.Color.blurple(), timestamp=interaction.created_at, title=query['name'], description=', '.join(query['alt_names']))
+                    embed.set_author(name=interaction.user.name, icon_url=interaction.user.avatar)
+                    embed = utility.char_format_embed(embed, query)
+
+                    link_buttons = utility.LinkButton()
+                    link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name']} AniList Page", url=query['site_url']))
+
+                    await interaction.response.send_message(embed=embed, view=link_buttons)
             elif type(query) == list:
-                pass
+                embed = discord.Embed(colour=discord.Color.from_rgb(255, 0, 0), timestamp=interaction.created_at)
+                for error in query:
+                    embed.add_field(name=error['message'], value=f"Status code: {error['status']}")
+                await interaction.response.send_message(embed=embed)
 
         except Exception as e:
             embed = discord.Embed(colour=discord.Color.from_rgb(255, 0, 0), timestamp=interaction.created_at)

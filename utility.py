@@ -12,7 +12,7 @@ db = db_client['release_tracking']
 collection = db['792309472784547850']
 
 
-def format_embed(embed, data) -> discord.Embed:
+def format_embed(embed: discord.Embed, data: dict) -> discord.Embed:
     if data['banner_image'] != 'Not Available':
         embed.set_image(url=data['banner_image'])
     embed.set_thumbnail(url=data['cover_image'])
@@ -52,7 +52,7 @@ def format_embed(embed, data) -> discord.Embed:
     return embed
 
 
-def hex_to_rgb(hex_color):
+def hex_to_rgb(hex_color: str) -> tuple:
     hex_color = hex_color.lstrip('#')
     rgb = tuple(int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
     return rgb[0], rgb[1], rgb[2]
@@ -75,8 +75,43 @@ def value_check(query: dict) -> dict:
     return query
 
 
+def char_value_check(query: dict) -> dict:
+    MAXLEN = 1024
+    for key, value in query.items():
+        if isinstance(value, list) and len(value) == 0:
+            query[key] = ['None']
+        elif isinstance(value, str):
+            value = value.replace('__', '**').replace('!', '').replace('~', '||').replace('/None', '').replace('None/', '')
+            query[key] = value
+            if len(value) > MAXLEN:
+                index = len(value) - MAXLEN + 3
+                query[key] = value[: -index]
+
+    return query
+
+
+def char_format_embed(embed: discord.Embed, data: dict) -> discord.Embed:
+    embed.set_thumbnail(url=data['image']['large'])
+    embed.add_field(name='Description', value=data['data'])
+    embed.add_field(name='Age:', value=data['age'], inline=False)
+    embed.add_field(name='Birthday:', value=data['birthdate'], inline=False)
+
+    appears_in = []
+    for media in data['appears_in']:
+        name = media['title']['name_romaji']
+        english = media['title']['name_english']
+        if english is None or name == english:
+            appears_in.append(f"{media['type'].title()}: {name}")
+        else:
+            appears_in.append(f"{media['type'].title()}: {name}({english})")
+
+    embed.add_field(name='Appears In:', value='\n'.join(appears_in))
+
+    return embed
+
+
 class Options(discord.ui.Select):
-    def __init__(self, data, remove: bool = False):
+    def __init__(self, data, remove: bool = False) -> None:
         selection = []
         self.remove = remove
 
@@ -146,8 +181,12 @@ class View(discord.ui.View):
         self.name = name
         self.data = data
         self.page = self.data['pageInfo']['currentPage']
+        self.char = char
         super().__init__()
-        self.select_class = Options(data=data, remove=remove)
+        if char is True:
+            self.select_class = CharOptions(data=data)
+        else:
+            self.select_class = Options(data=data, remove=remove)
         self.add_item(self.select_class)
 
         if self.page == 1:
@@ -170,7 +209,10 @@ class View(discord.ui.View):
         await interaction.response.defer()
         self.remove_item(self.select_class)
         query = anilist.get_multiple(name=self.name, anime_id=None, page=self.page - 1)
-        self.select_class = Options(query)
+        if self.char is False:
+            self.select_class = Options(query)
+        else:
+            self.select_class = CharOptions(data=query)
 
         self.add_item(self.select_class)
 
@@ -189,7 +231,10 @@ class View(discord.ui.View):
         self.remove_item(self.select_class)
         query = anilist.get_multiple(name=self.name, anime_id=None, page=self.page + 1)
 
-        self.select_class = Options(query)
+        if self.char is False:
+            self.select_class = Options(query)
+        else:
+            self.select_class = CharOptions(query)
         self.add_item(self.select_class)
 
         self.reset_buttons()
@@ -203,7 +248,7 @@ class View(discord.ui.View):
 
 
 class CharOptions(discord.ui.Select):
-    def __init__(self, data):
+    def __init__(self, data: dict):
         characters = data['characters']
         page_info = data['pageIngo']
         selection = []
@@ -223,4 +268,14 @@ class CharOptions(discord.ui.Select):
         await interaction.response.defer()
 
         query = anilist.get_character(char_id=int(self.values[0]))
-        
+        query = char_value_check(query)
+
+        embed = discord.Embed(colour=discord.Color.blurple(), timestamp=interaction.created_at, title=query['name'], description=', '.join(query['alt_names']))
+        embed.set_author(name=interaction.user.name, icon_url=interaction.user.avatar)
+        embed = char_format_embed(embed, query)
+
+        link_buttons = LinkButton()
+        link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name']} AniList Page", url=query['site_url']))
+
+        await interaction.followup.send(embed=embed, view=link_buttons)
+
