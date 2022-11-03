@@ -20,10 +20,6 @@ class Anime(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.Cog.listener()
-    async def on_ready(self):
-        print("anime.py is ready")
-
     @app_commands.command(description="Returns with anime information. Will send a dropdown menu if multiple anime are found. ", name='anime')
     async def anime(self, interaction: discord.Interaction, name: str = None, anime_id: int = None):
         if name is None and anime_id is None:

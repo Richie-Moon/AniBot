@@ -16,11 +16,12 @@ class Character(commands.Cog):
             return
 
         try:
+            await interaction.response.defer()
             query = anilist.get_characters(name=name, char_id=character_id)
             if type(query) == dict:
                 if query['multiple'] is True:
                     view = utility.View(data=query, name=name, remove=False, char=True)
-                    await interaction.response.send_message(content='The `lastPage` number may be wrong due to API restrictions.', view=view)
+                    await interaction.followup.send(content='The `lastPage` number may be wrong due to API restrictions.', view=view)
                 else:
                     query = utility.char_value_check(query)
 
@@ -31,7 +32,7 @@ class Character(commands.Cog):
                     link_buttons = utility.LinkButton()
                     link_buttons.add_item(discord.ui.Button(style=discord.ButtonStyle.link, label=f"{query['name']} AniList Page", url=query['site_url']))
 
-                    await interaction.response.send_message(embed=embed, view=link_buttons)
+                    await interaction.followup.send(embed=embed, view=link_buttons)
             elif type(query) == list:
                 embed = discord.Embed(colour=discord.Color.from_rgb(255, 0, 0), timestamp=interaction.created_at)
                 for error in query:
@@ -42,7 +43,7 @@ class Character(commands.Cog):
             embed = discord.Embed(colour=discord.Color.from_rgb(255, 0, 0), timestamp=interaction.created_at)
             embed.add_field(name='Error', value=e)
 
-            await interaction.response.send_message(embed=embed)
+            await interaction.followup.send(embed=embed)
 
 
 async def setup(bot: commands.Bot):

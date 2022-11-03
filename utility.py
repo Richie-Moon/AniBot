@@ -81,31 +81,42 @@ def char_value_check(query: dict) -> dict:
         if isinstance(value, list) and len(value) == 0:
             query[key] = ['None']
         elif isinstance(value, str):
-            value = value.replace('__', '**').replace('!', '').replace('~', '||').replace('/None', '').replace('None/', '')
-            query[key] = value
+            value = value.replace('_', '*').replace('!', '').replace('~', '||').replace('/None', '').replace('None/', '')
             if len(value) > MAXLEN:
-                index = len(value) - MAXLEN + 3
-                query[key] = value[: -index]
+                index = len(value) - MAXLEN + 5
+                cutoff = value[-index:]
+                if '||' in cutoff:
+                    query[key] = value[: -index] + '||...'
+                else:
+                    query[key] = value[: -index] + '...'
+            else:
+                query[key] = value
 
     return query
 
 
 def char_format_embed(embed: discord.Embed, data: dict) -> discord.Embed:
-    embed.set_thumbnail(url=data['image']['large'])
-    embed.add_field(name='Description', value=data['data'])
+    embed.set_thumbnail(url=data['image'])
+    embed.add_field(name='Description', value=data['description'])
     embed.add_field(name='Age:', value=data['age'], inline=False)
-    embed.add_field(name='Birthday:', value=data['birthdate'], inline=False)
+    embed.add_field(name='Birthday:', value=data['birthdate'], inline=True)
 
     appears_in = []
     for media in data['appears_in']:
-        name = media['title']['name_romaji']
-        english = media['title']['name_english']
+        name = media['name_romaji']
+        english = media['name_english']
         if english is None or name == english:
             appears_in.append(f"{media['type'].title()}: {name}")
         else:
-            appears_in.append(f"{media['type'].title()}: {name}({english})")
+            appears_in.append(f"{media['type'].title()}: {name} ({english})")
 
-    embed.add_field(name='Appears In:', value='\n'.join(appears_in))
+    MAXLEN = 1024
+    formatted = '\n'.join(appears_in)
+    if len(formatted) > MAXLEN:
+        index = len(formatted) - MAXLEN + 3
+        formatted = formatted[: -index] + '...'
+
+    embed.add_field(name='Appears In:', value=formatted, inline=False)
 
     return embed
 
@@ -250,7 +261,7 @@ class View(discord.ui.View):
 class CharOptions(discord.ui.Select):
     def __init__(self, data: dict):
         characters = data['characters']
-        page_info = data['pageIngo']
+        page_info = data['pageInfo']
         selection = []
 
         for character in characters:

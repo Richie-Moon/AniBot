@@ -224,7 +224,7 @@ def get_character(char_id: int):
             gender
             age
             siteUrl
-            media (sort: POPULARITY) {
+            media (sort: POPULARITY_DESC) {
                 edges {
                     node {
                         title {
@@ -257,13 +257,14 @@ def get_character(char_id: int):
         age = data['age']
         site_url = data['siteUrl']
         birthdate = f"{data['dateOfBirth']['day']}/{data['dateOfBirth']['month']}/{data['dateOfBirth']['year']}"
+        image = data['image']['large']
         appears_in = []
         for media in data['media']['edges']:
             node = media['node']
             appears_in.append({'type': node['type'].lower(), 'name_english': node['title']['english'], 'name_romaji': node['title']['romaji']})
 
         formatted_data = {'id': _id, 'name': name, 'alt_names': alt_names, 'description': description, 'gender': gender, 'age': age, 'site_url': site_url, 'birthdate': birthdate,
-                          'appears_in': appears_in, 'multiple': False}
+                          'appears_in': appears_in, 'image': image, 'multiple': False}
 
         return formatted_data
     else:
