@@ -7,6 +7,7 @@ import anilist
 from discord.ext import tasks, commands
 from pymongo import errors
 import utility
+import datetime
 
 load_dotenv()
 TOKEN = environ['TOKEN']
@@ -16,6 +17,13 @@ db_client = pymongo.MongoClient(f"mongodb+srv://CSA:{PASSWORD}@anibot.o2nqcvj.mo
 
 db = db_client['release_tracking']
 collection = db['792309472784547850']
+
+
+@tasks.loop(minutes=4, seconds=30)
+async def keep_online():
+    channel = client.get_channel(1039045162749411338)
+    time = datetime.datetime.now()
+    await channel.send(time.strftime("%I:%M:%S %p, %A %d %B %Y %Z"))
 
 
 @tasks.loop(minutes=1.0)
@@ -47,7 +55,7 @@ async def update_times():
 
 class Bot(commands.Bot):
     def __init__(self):
-        super().__init__(intents=discord.Intents.all(), application_id=1026407754899931189, command_prefix='-')
+        super().__init__(intents=discord.Intents.all(), application_id=1026407754899931189, command_prefix='-', heartbeat_timeout=300)
 
     async def setup_hook(self) -> None:
         await self.load_extension(f"cogs.character")
@@ -57,6 +65,7 @@ class Bot(commands.Bot):
 
     async def on_ready(self):
         update_times.start()
+        keep_online.start()
 
         print(f"Logged in as {self.user}")
 
