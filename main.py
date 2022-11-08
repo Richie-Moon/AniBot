@@ -8,6 +8,7 @@ from discord.ext import tasks, commands
 from pymongo import errors
 import utility
 import datetime
+import zoneinfo
 
 load_dotenv()
 TOKEN = environ['TOKEN']
@@ -22,7 +23,7 @@ collection = db['792309472784547850']
 @tasks.loop(minutes=4, seconds=30)
 async def keep_online():
     channel = client.get_channel(1039045162749411338)
-    time = datetime.datetime.now()
+    time = datetime.datetime.now(tz=zoneinfo.ZoneInfo('Pacific/Auckland'))
     await channel.send(time.strftime("%I:%M:%S %p, %A %d %B %Y %Z"))
 
 
