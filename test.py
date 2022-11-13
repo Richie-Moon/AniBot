@@ -21,7 +21,7 @@ PASSWORD = environ['PASSWORD']
 # test = db['test']
 #
 
-print(anilist.get_characters('Levi'))
+print(anilist.get_next_airing_episode(97940))
 
 
 # replace('~', '||'), replace('!', ''), replace('__', '**')

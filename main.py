@@ -20,11 +20,11 @@ db = db_client['release_tracking']
 collection = db['792309472784547850']
 
 
-@tasks.loop(minutes=4, seconds=30)
-async def keep_online():
-    channel = client.get_channel(1039045162749411338)
-    time = datetime.datetime.now(tz=zoneinfo.ZoneInfo('Pacific/Auckland'))
-    await channel.send(time.strftime("%I:%M:%S %p, %A %d %B %Y %Z"))
+# @tasks.loop(minutes=4, seconds=30)
+# async def keep_online():
+#     channel = client.get_channel(1039045162749411338)
+#     time = datetime.datetime.now(tz=zoneinfo.ZoneInfo('Pacific/Auckland'))
+#     await channel.send(time.strftime("%I:%M:%S %p, %A %d %B %Y %Z"))
 
 
 @tasks.loop(minutes=1.0)
@@ -32,18 +32,20 @@ async def update_times():
     embed = discord.Embed()
     channel = client.get_channel(1016581439002783784)
     tracking = collection.find()
+    time_now = datetime.datetime.timestamp(datetime.datetime.now())
+
     for anime in tracking:
         query = anilist.get_next_airing_episode(anime['_id'])
         embed.description = f"[{query['name_romaji']} AniList Page](https://anilist.co/anime/{query['id']}/)"
         if query['next_airing_episode'] is None:
             if query['name_romaji'] == query['name_english'] or query['name_english'] is None:
-                embed.title = f"Episode {query['episode'] - 1} of {query['name_romaji']} just aired!"
+                embed.title = f"Episode {query['episodes']} of {query['name_romaji']} just aired!"
             else:
-                embed.title = f"Episode {query['episode'] - 1} of {query['name_romaji']} ({query['name_english']}) just aired!"
+                embed.title = f"Episode {query['episodes']} of {query['name_romaji']} ({query['name_english']}) just aired!"
             await channel.send(embed=embed)
             collection.delete_one({'_id': anime['id']})
 
-        elif query['time_until_airing'] >= anime['time_until_airing']:
+        elif time_now >= query['airing_at']:
             if query['name_romaji'] == query['name_english'] or query['name_english'] is None:
                 embed.title = f"Episode {query['episode'] - 1} of {query['name_romaji']} just aired!"
             else:
@@ -51,7 +53,7 @@ async def update_times():
             await channel.send(embed=embed)
             collection.update_one({'_id': query['id']}, {'$set': {'time_until_airing': query['time_until_airing'], 'episode': query['episode'], 'airing_at': query['airing_at']}})
         else:
-            collection.update_one({'_id': query['id']}, {'$set': {'time_until_airing': query['time_until_airing'], 'episode': query['episode']}})
+            collection.update_one({'_id': query['id']}, {'$set': {'time_until_airing': query['time_until_airing'], 'airing_at': query['airing_at']}})
 
 
 class Bot(commands.Bot):
@@ -66,7 +68,7 @@ class Bot(commands.Bot):
 
     async def on_ready(self):
         update_times.start()
-        keep_online.start()
+        # keep_online.start()
 
         print(f"Logged in as {self.user}")
 

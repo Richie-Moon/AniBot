@@ -167,6 +167,7 @@ def get_next_airing_episode(anime_id: int):
                     romaji
                     english
                 }
+                episodes
                 nextAiringEpisode {
                     airingAt
                     timeUntilAiring
@@ -182,6 +183,7 @@ def get_next_airing_episode(anime_id: int):
     data = response['data']['Media']
 
     if data is not None:
+        print(data)
         title = data['title']
         next_airing_episode = data['nextAiringEpisode']
 
@@ -190,14 +192,17 @@ def get_next_airing_episode(anime_id: int):
         name_english = title['english']
         name_romaji = title['romaji']
 
+        total_episodes = data['episodes']
+
         if next_airing_episode is None:
-            return {'name_english': name_english, 'name_romaji': name_romaji, 'id': _id, 'next_airing_episode': None}
+            return {'name_english': name_english, 'name_romaji': name_romaji, 'id': _id, 'next_airing_episode': None, 'episodes': total_episodes}
 
         airing_at = next_airing_episode['airingAt']
         time_until_airing = next_airing_episode['timeUntilAiring']
         episode = next_airing_episode['episode']
 
-        formatted_data = {'name_english': name_english, 'name_romaji': name_romaji, 'airing_at': airing_at, 'time_until_airing': time_until_airing, 'episode': episode, 'id': _id, 'next_airing_episode': True}
+        formatted_data = {'name_english': name_english, 'name_romaji': name_romaji, 'airing_at': airing_at, 'time_until_airing': time_until_airing, 'episode': episode, 'id': _id,
+                          'next_airing_episode': True, 'episodes': total_episodes}
         return formatted_data
     else:
         return response['errors']
